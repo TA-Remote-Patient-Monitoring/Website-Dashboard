@@ -1,0 +1,182 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Client\RequestException;
+
+/**
+ * MobileApiService
+ *
+ * Kelas terpusat untuk mengakses API backend mobile RPMS.
+ * Base URL dibaca dari .env → RPMS_API_BASE_URL
+ *
+ * Endpoint yang digunakan:
+ *   GET /api/profiles/{id_user}              → daftar profile (nama, umur, gender, tb, bb)
+ *   GET /api/measurements/{id_profile}        → semua riwayat pengukuran
+ *   GET /api/measurements/{id_profile}/latest → pengukuran terbaru
+ */
+class MobileApiService
+{
+    protected string $baseUrl;
+    protected int    $timeout;
+
+    public function __construct()
+    {
+        $this->baseUrl = rtrim(config('services.rpms_api.base_url', 'http://10.20.31.178:8000'), '/');
+        $this->timeout = (int) config('services.rpms_api.timeout', 10);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PROFILES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Ambil semua profile milik satu user.
+     *
+     * Response tiap item:
+     *   id, id_user, name, age, gender, tb, bb, image_url
+     *
+     * @return array<int, array>  kosong jika error / tidak ada data
+     */
+    public function getProfiles(int $idUser): array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->get("{$this->baseUrl}/api/profiles/{$idUser}");
+
+            if ($response->successful()) {
+                return $response->json() ?? [];
+            }
+
+            // 404 = belum ada profile, kembalikan array kosong
+            if ($response->status() === 404) {
+                return [];
+            }
+
+            Log::warning('MobileApi: getProfiles error', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            return [];
+
+        } catch (\Exception $e) {
+            Log::error('MobileApi: getProfiles exception', ['message' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Ambil satu profile berdasarkan id_user dan id_profile.
+     * Wrapper atas getProfiles() — cocok untuk halaman detail.
+     *
+     * @return array|null  null jika tidak ditemukan
+     */
+    public function getProfile(int $idUser, int $idProfile): ?array
+    {
+        $profiles = $this->getProfiles($idUser);
+        foreach ($profiles as $profile) {
+            if ((int) $profile['id'] === $idProfile) {
+                return $profile;
+            }
+        }
+        return null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MEASUREMENTS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Ambil semua riwayat pengukuran untuk satu profile.
+     *
+     * Response tiap item:
+     *   id, id_user, id_profile, bpm, dia, sys, ihb, mov, datetime
+     *
+     * @return array<int, array>
+     */
+    public function getMeasurements(int $idProfile): array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->get("{$this->baseUrl}/api/measurements/{$idProfile}");
+
+            if ($response->successful()) {
+                return $response->json() ?? [];
+            }
+
+            if ($response->status() === 404) {
+                return [];
+            }
+
+            Log::warning('MobileApi: getMeasurements error', [
+                'status' => $response->status(),
+            ]);
+            return [];
+
+        } catch (\Exception $e) {
+            Log::error('MobileApi: getMeasurements exception', ['message' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Ambil pengukuran terbaru saja untuk satu profile.
+     *
+     * @return array|null  null jika belum ada data atau error
+     */
+    public function getLatestMeasurement(int $idProfile): ?array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->get("{$this->baseUrl}/api/measurements/{$idProfile}/latest");
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('MobileApi: getLatestMeasurement exception', ['message' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HELPER: ambil semua profiles + pengukuran terbaru sekaligus
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Kembalikan daftar pasien lengkap dengan vital terbaru.
+     * Cocok untuk ditampilkan di tabel dashboard.
+     *
+     * @param  int  $idUser
+     * @return array<int, array{
+     *   id: int, name: string, age: int, gender: string,
+     *   tb: float, bb: float, latest: array|null
+     * }>
+     */
+    public function getPatientsWithLatestVitals(int $idUser): array
+    {
+        $profiles = $this->getProfiles($idUser);
+        $result   = [];
+
+        foreach ($profiles as $profile) {
+            $latest = $this->getLatestMeasurement((int) $profile['id']);
+            $result[] = [
+                'id'      => $profile['id'],
+                'name'    => $profile['name'],
+                'age'     => $profile['age'],
+                'gender'  => $profile['gender'],
+                'tb'      => $profile['tb'],          // tinggi badan (cm)
+                'bb'      => $profile['bb'],          // berat badan (kg)
+                'image_url' => $profile['image_url'] ?? null,
+                'latest'  => $latest,                 // bpm, sys, dia, datetime (atau null)
+            ];
+        }
+
+        return $result;
+    }
+}
