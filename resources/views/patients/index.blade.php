@@ -49,7 +49,6 @@
                 <tr>
                     <th class="px-md py-sm font-label-caps text-on-surface-variant">PATIENT NAME</th>
                     <th class="px-md py-sm font-label-caps text-on-surface-variant">AGE</th>
-                    <th class="px-md py-sm font-label-caps text-on-surface-variant">WARD / BED</th>
                     <th class="px-md py-sm font-label-caps text-on-surface-variant text-center">HEART RATE</th>
                     <th class="px-md py-sm font-label-caps text-on-surface-variant text-center">SPO2</th>
                     <th class="px-md py-sm font-label-caps text-on-surface-variant">STATUS</th>
@@ -92,11 +91,6 @@
                             <span class="font-body-sm text-body-sm text-on-surface">{{ $patient['age'] }} yrs</span>
                         </td>
 
-                        {{-- Ward --}}
-                        <td class="px-md py-md">
-                            <span class="font-body-sm text-body-sm text-on-surface-variant">{{ $patient['ward'] }}</span>
-                        </td>
-
                         {{-- Heart Rate --}}
                         <td class="px-md py-md text-center">
                             <span class="font-data-mono {{ $hrColor }}">
@@ -131,7 +125,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-md py-xl text-center text-on-surface-variant font-body-sm text-body-sm">
+                        <td colspan="6" class="px-md py-xl text-center text-on-surface-variant font-body-sm text-body-sm">
                             No patients found.
                         </td>
                     </tr>
