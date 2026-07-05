@@ -84,6 +84,41 @@ class MobileApiService
         return null;
     }
 
+    /**
+     * Cari user Mobile API berdasarkan nomor telepon.
+     * Memanggil: GET /api/profiles/search?phone={phone}
+     *
+     * Response berisi:
+     *   id_user, name, phone, profiles: [{ id, id_user, name, age, gender, tb, bb, image_url }]
+     *
+     * @return array|null  null jika tidak ditemukan atau error
+     */
+    public function searchUserByPhone(string $phone): ?array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->get("{$this->baseUrl}/api/profiles/search", ['phone' => $phone]);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            if ($response->status() === 404) {
+                return null; // Nomor tidak ditemukan
+            }
+
+            Log::warning('MobileApi: searchUserByPhone error', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('MobileApi: searchUserByPhone exception', ['message' => $e->getMessage()]);
+            return null;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // MEASUREMENTS
     // ─────────────────────────────────────────────────────────────────────────
@@ -144,36 +179,92 @@ class MobileApiService
         }
     }
 
+    /**
+     * Ambil semua riwayat pengukuran SpO2 untuk satu profile.
+     * Response tiap item: id, id_user, id_profile, spo2, bpm, temperature, blood_sugar, datetime
+     *
+     * @return array<int, array>
+     */
+    public function getSpo2Measurements(int $idProfile): array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->get("{$this->baseUrl}/api/measurements/{$idProfile}/spo2");
+
+            if ($response->successful()) {
+                return $response->json() ?? [];
+            }
+
+            if ($response->status() === 404) {
+                return [];
+            }
+
+            Log::warning('MobileApi: getSpo2Measurements error', [
+                'status' => $response->status(),
+            ]);
+            return [];
+
+        } catch (\Exception $e) {
+            Log::error('MobileApi: getSpo2Measurements exception', ['message' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Ambil pengukuran SpO2 terbaru satu profile.
+     * Response berisi: spo2, bpm, temperature, blood_sugar, datetime
+     *
+     * @return array|null  null jika belum ada data atau error
+     */
+    public function getLatestSpo2Measurement(int $idProfile): ?array
+    {
+        try {
+            $response = Http::timeout($this->timeout)
+                ->get("{$this->baseUrl}/api/measurements/{$idProfile}/spo2/latest");
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('MobileApi: getLatestSpo2Measurement exception', ['message' => $e->getMessage()]);
+            return null;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // HELPER: ambil semua profiles + pengukuran terbaru sekaligus
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Kembalikan daftar pasien lengkap dengan vital terbaru.
+     * Kembalikan daftar pasien yang di-assign lengkap dengan vital terbaru.
      * Cocok untuk ditampilkan di tabel dashboard.
      *
-     * @param  int  $idUser
-     * @return array<int, array{
-     *   id: int, name: string, age: int, gender: string,
-     *   tb: float, bb: float, latest: array|null
-     * }>
+     * @param  array  $assignedProfiles  Array of ['api_user_id' => x, 'profile_id' => y, 'profile_name' => z]
      */
-    public function getPatientsWithLatestVitals(int $idUser): array
+    public function getAssignedPatientsWithLatestVitals(array $assignedProfiles): array
     {
-        $profiles = $this->getProfiles($idUser);
-        $result   = [];
+        $result = [];
 
-        foreach ($profiles as $profile) {
-            $latest = $this->getLatestMeasurement((int) $profile['id']);
+        foreach ($assignedProfiles as $dp) {
+            $profile = $this->getProfile((int) $dp['api_user_id'], (int) $dp['profile_id']);
+            if (!$profile) continue;
+
+            $latest     = $this->getLatestMeasurement((int) $profile['id']);
+            $latestSpo2 = $this->getLatestSpo2Measurement((int) $profile['id']);
+            
             $result[] = [
-                'id'      => $profile['id'],
-                'name'    => $profile['name'],
-                'age'     => $profile['age'],
-                'gender'  => $profile['gender'],
-                'tb'      => $profile['tb'],          // tinggi badan (cm)
-                'bb'      => $profile['bb'],          // berat badan (kg)
-                'image_url' => $profile['image_url'] ?? null,
-                'latest'  => $latest,                 // bpm, sys, dia, datetime (atau null)
+                'id'          => $profile['id'],
+                'name'        => $dp['profile_name'] ?? $profile['name'],
+                'age'         => $profile['age'],
+                'gender'      => $profile['gender'],
+                'tb'          => $profile['tb'],
+                'bb'          => $profile['bb'],
+                'image_url'   => $profile['image_url'] ?? null,
+                'latest'      => $latest,
+                'latest_spo2' => $latestSpo2,
             ];
         }
 

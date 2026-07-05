@@ -28,31 +28,36 @@ class DoctorSeeder extends Seeder
                 'name'              => 'Dr. Ahmad Fauzi',
                 'email'             => 'dr.fauzi@rpms.test',
                 'password'          => Hash::make('password'),
+                'role'              => 'doctor',     // ← Dokter biasa
                 'email_verified_at' => now(),
             ],
             [
                 'name'              => 'Dr. Siti Rahayu',
                 'email'             => 'dr.rahayu@rpms.test',
                 'password'          => Hash::make('password'),
+                'role'              => 'doctor',
                 'email_verified_at' => now(),
             ],
             [
                 'name'              => 'Dr. Budi Santoso',
                 'email'             => 'dr.santoso@rpms.test',
                 'password'          => Hash::make('password'),
+                'role'              => 'doctor',
                 'email_verified_at' => now(),
             ],
             [
                 'name'              => 'Dr. Dewi Lestari',
                 'email'             => 'dr.lestari@rpms.test',
                 'password'          => Hash::make('password'),
+                'role'              => 'doctor',
                 'email_verified_at' => now(),
             ],
         ];
 
         foreach ($doctors as $doctor) {
             // firstOrCreate: tidak membuat duplikat jika email sudah ada
-            User::firstOrCreate(
+            // updateOrCreate juga memperbarui role jika sudah ada
+            User::updateOrCreate(
                 ['email' => $doctor['email']],
                 $doctor
             );

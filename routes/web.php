@@ -5,12 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientController;
-
-/*
-|--------------------------------------------------------------------------
-| Authentication Routes
-|--------------------------------------------------------------------------
-*/
+use App\Http\Controllers\Admin\AdminController;
 
 // Redirect root ke halaman login
 Route::get('/', function () {
@@ -29,13 +24,27 @@ Route::post('/register', [RegisterController::class, 'register'])->name('registe
 
 /*
 |--------------------------------------------------------------------------
-| Protected Routes (Authenticated Users Only)
+| Protected Routes — Dokter (Authenticated)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Patient routes
-    Route::get('/patients',          [PatientController::class, 'index'])->name('patients.index');
-    Route::get('/patients/{id}/report', [PatientController::class, 'report'])->name('patients.report');
+    Route::get('/patients',              [PatientController::class, 'index'])->name('patients.index');
+    Route::get('/patients/{id}/report',  [PatientController::class, 'report'])->name('patients.report');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes — hanya admin
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/',                         [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/create-doctor',            [AdminController::class, 'createDoctorForm'])->name('create-doctor');
+    Route::post('/create-doctor',           [AdminController::class, 'storeDoctor'])->name('store-doctor');
+    Route::get('/assign-patient',           [AdminController::class, 'assignPatientForm'])->name('assign-patient');
+    Route::post('/assign-patient',          [AdminController::class, 'assignPatient'])->name('assign-patient.store');
+});
+

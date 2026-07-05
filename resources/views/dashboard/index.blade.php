@@ -36,45 +36,39 @@
         </div>
     </div>
 
-    {{-- Active Alerts --}}
+    {{-- Critical Patients --}}
     <div class="bg-surface-container-lowest p-md rounded-xl clinical-shadow border border-outline-variant/30 flex flex-col justify-between">
         <div class="flex justify-between items-start">
-            <span class="text-error p-2 bg-error/10 rounded-lg material-symbols-outlined">warning</span>
+            <span class="text-error p-2 bg-error/10 rounded-lg material-symbols-outlined">emergency</span>
             <span class="text-error font-bold text-xs px-2 py-1 bg-error-container/50 rounded-full">High Priority</span>
         </div>
         <div>
-            <p class="font-label-caps text-on-surface-variant mt-md">ACTIVE ALERTS</p>
-            <p class="font-headline-lg text-error">{{ $stats['active_alerts'] }}</p>
+            <p class="font-label-caps text-on-surface-variant mt-md">CRITICAL PATIENTS</p>
+            <p class="font-headline-lg text-error">{{ number_format($stats['critical_patients']) }}</p>
         </div>
     </div>
 
-    {{-- Avg Heart Rate --}}
+    {{-- Warning Patients --}}
     <div class="bg-surface-container-lowest p-md rounded-xl clinical-shadow border border-outline-variant/30 flex flex-col justify-between">
         <div class="flex justify-between items-start">
-            <span class="text-secondary p-2 bg-secondary/10 rounded-lg material-symbols-outlined">favorite</span>
-            <span class="text-on-surface-variant text-xs font-medium">BPM Avg</span>
+            <span class="text-on-secondary-container p-2 bg-secondary-container/30 rounded-lg material-symbols-outlined">warning</span>
+            <span class="text-on-surface-variant text-xs font-medium">Needs Attention</span>
         </div>
         <div>
-            <p class="font-label-caps text-on-surface-variant mt-md">AVG HEART RATE</p>
-            <div class="flex items-baseline gap-xs">
-                <p class="font-headline-lg text-on-surface">{{ $stats['avg_heart_rate'] }}</p>
-                <span class="text-body-sm text-on-surface-variant">bpm</span>
-            </div>
+            <p class="font-label-caps text-on-surface-variant mt-md">WARNING PATIENTS</p>
+            <p class="font-headline-lg text-on-secondary-container">{{ number_format($stats['warning_patients']) }}</p>
         </div>
     </div>
 
-    {{-- Avg SpO2 --}}
+    {{-- Stable Patients --}}
     <div class="bg-surface-container-lowest p-md rounded-xl clinical-shadow border border-outline-variant/30 flex flex-col justify-between">
         <div class="flex justify-between items-start">
-            <span class="text-primary-container p-2 bg-primary-container/10 rounded-lg material-symbols-outlined">air</span>
-            <span class="text-on-surface-variant text-xs font-medium">System Score</span>
+            <span class="text-secondary p-2 bg-secondary/10 rounded-lg material-symbols-outlined">check_circle</span>
+            <span class="text-on-surface-variant text-xs font-medium">Normal</span>
         </div>
         <div>
-            <p class="font-label-caps text-on-surface-variant mt-md">AVG SPO2</p>
-            <div class="flex items-baseline gap-xs">
-                <p class="font-headline-lg text-on-surface">{{ $stats['avg_spo2'] }}</p>
-                <span class="text-body-sm text-on-surface-variant">%</span>
-            </div>
+            <p class="font-label-caps text-on-surface-variant mt-md">STABLE PATIENTS</p>
+            <p class="font-headline-lg text-secondary">{{ number_format($stats['stable_patients']) }}</p>
         </div>
     </div>
 
@@ -99,7 +93,8 @@
                     <tr>
                         <th class="px-md py-sm font-label-caps text-on-surface-variant">PATIENT NAME</th>
                         <th class="px-md py-sm font-label-caps text-on-surface-variant text-center">HEART RATE</th>
-                        <th class="px-md py-sm font-label-caps text-on-surface-variant text-center">SPO2</th>
+                        <th class="px-md py-sm font-label-caps text-on-surface-variant text-center">SYS / DIA</th>
+                        <th class="px-md py-sm font-label-caps text-on-surface-variant text-center">GLUCOSE LEVEL</th>
                         <th class="px-md py-sm font-label-caps text-on-surface-variant">STATUS</th>
                         <th class="px-md py-sm font-label-caps text-on-surface-variant">ACTION</th>
                     </tr>
@@ -114,8 +109,9 @@
                                 'no-data'  => ['bg' => 'bg-surface-container',          'text' => 'text-on-surface-variant',      'dot' => 'bg-outline',                 'label' => 'No Data'],
                                 default    => ['bg' => 'bg-secondary/10',               'text' => 'text-secondary',               'dot' => 'bg-secondary',               'label' => 'Stable'],
                             };
-                            $hrColor   = $patient['status'] === 'critical' ? 'text-error' : ($patient['status'] === 'warning' ? 'text-on-surface' : 'text-secondary');
-                            $spo2Color = $patient['status'] === 'critical' ? 'text-on-error-container' : ($patient['status'] === 'warning' ? 'text-on-surface' : 'text-secondary');
+                            $hrColor      = $patient['status'] === 'critical' ? 'text-error' : ($patient['status'] === 'warning' ? 'text-on-surface' : 'text-secondary');
+                            $bpColor      = $patient['status'] === 'critical' ? 'text-error' : ($patient['status'] === 'warning' ? 'text-on-secondary-container' : 'text-on-surface');
+                            $glucoseColor = isset($patient['glucose']) ? ($patient['glucose'] > 140 ? 'text-error' : ($patient['glucose'] > 100 ? 'text-on-secondary-container' : 'text-secondary')) : 'text-on-surface-variant';
                         @endphp
                         <tr class="hover:bg-surface-container/30 transition-colors">
                             <td class="px-md py-md">
@@ -133,7 +129,26 @@
                                 <span class="font-data-mono {{ $hrColor }}">{{ $patient['heart_rate'] }} <span class="text-xs">bpm</span></span>
                             </td>
                             <td class="px-md py-md text-center">
-                                <span class="font-data-mono {{ $spo2Color }}">{{ $patient['spo2'] }} <span class="text-xs">%</span></span>
+                                @if($patient['status'] !== 'no-data')
+                                    <span class="font-data-mono {{ $bpColor }}">
+                                        {{ $patient['sys'] }}<span class="text-xs">/</span>{{ $patient['dia'] }}
+                                        <span class="text-xs">mmHg</span>
+                                    </span>
+                                @else
+                                    <span class="text-on-surface-variant">—</span>
+                                @endif
+                            </td>
+                            <td class="px-md py-md text-center">
+                                @if($patient['status'] !== 'no-data')
+                                    <span class="font-data-mono {{ $glucoseColor }}">
+                                        {{ $patient['glucose'] !== null ? number_format($patient['glucose'], 1) : '—' }}
+                                        @if($patient['glucose'] !== null)
+                                            <span class="text-xs">mg/dL</span>
+                                        @endif
+                                    </span>
+                                @else
+                                    <span class="text-on-surface-variant">—</span>
+                                @endif
                             </td>
                             <td class="px-md py-md">
                                 <span class="inline-flex items-center gap-xs px-2 py-1 {{ $statusConfig['bg'] }} {{ $statusConfig['text'] }} text-xs font-bold rounded">
@@ -148,7 +163,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-md py-lg text-center text-on-surface-variant font-body-sm text-body-sm">
+                            <td colspan="7" class="px-md py-lg text-center text-on-surface-variant font-body-sm text-body-sm">
                                 No patient data available.
                             </td>
                         </tr>
@@ -193,7 +208,7 @@
                             default    => ['wrap' => 'bg-surface-container border-outline opacity-80', 'label' => 'text-on-surface-variant', 'title' => 'text-on-surface-variant'],
                         };
                     @endphp
-                    <div class="p-md {{ $alertStyles['wrap'] }} border-l-4 rounded-lg" id="alert-{{ $loop->index }}">
+                    <div class="p-md {{ $alertStyles['wrap'] }} border-l-4 rounded-lg transition-all duration-300" id="{{ $alert['id'] ?? 'alert-'.$loop->index }}">
                         <div class="flex justify-between items-start mb-xs">
                             <span class="font-label-caps {{ $alertStyles['label'] }}">{{ strtoupper($alert['label']) }}</span>
                             <span class="text-[10px] text-on-surface-variant">{{ $alert['time'] }}</span>
@@ -203,9 +218,19 @@
                         @if(!empty($alert['actions']))
                             <div class="mt-md flex gap-base">
                                 @foreach($alert['actions'] as $action)
-                                    <button class="{{ $action['class'] }} px-3 py-1.5 rounded-lg text-xs font-bold">
-                                        {{ $action['label'] }}
-                                    </button>
+                                    @if(isset($action['url']))
+                                        <a href="{{ $action['url'] }}" class="{{ $action['class'] }} px-3 py-1.5 rounded-lg text-xs font-bold inline-block text-center">
+                                            {{ $action['label'] }}
+                                        </a>
+                                    @elseif(isset($action['action']) && $action['action'] === 'dismiss')
+                                        <button type="button" onclick="document.getElementById('{{ $alert['id'] ?? 'alert-'.$loop->index }}').style.display = 'none'" class="{{ $action['class'] }} px-3 py-1.5 rounded-lg text-xs font-bold">
+                                            {{ $action['label'] }}
+                                        </button>
+                                    @else
+                                        <button type="button" class="{{ $action['class'] }} px-3 py-1.5 rounded-lg text-xs font-bold">
+                                            {{ $action['label'] }}
+                                        </button>
+                                    @endif
                                 @endforeach
                             </div>
                         @endif

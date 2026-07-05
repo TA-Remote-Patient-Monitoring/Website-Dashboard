@@ -1,4 +1,6 @@
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends, HTTPException
+# pyrefly: ignore [missing-import]
 from fastapi import File, Form, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
@@ -70,6 +72,34 @@ def create_profile(
     return profile_to_response(profile)
 
 
+@router.get("/search")
+def search_user_by_phone(phone: str, db: Session = Depends(get_db)):
+    """
+    Cari user berdasarkan nomor telepon, lalu kembalikan
+    data user + semua profil miliknya.
+
+    Query param:
+        phone (str): nomor telepon yang dicari, contoh: 081234567890
+
+    Response:
+        { id_user, name, phone, profiles: [...] }
+    """
+    user = db.query(models.User).filter(models.User.phone == phone).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User dengan nomor telepon tersebut tidak ditemukan.")
+
+    profiles = db.query(models.Profile)\
+                 .filter(models.Profile.id_user == user.id)\
+                 .all()
+
+    return {
+        "id_user"  : user.id,
+        "name"     : user.name,
+        "phone"    : user.phone,
+        "profiles" : [profile_to_response(p) for p in profiles],
+    }
+
+
 @router.get("/{id_user}", response_model=List[schemas.ProfileOut])
 def get_profiles(id_user: int, db: Session = Depends(get_db)):
     """Ambil semua profile milik satu user (untuk ditampilkan di profile selector)."""
@@ -79,6 +109,7 @@ def get_profiles(id_user: int, db: Session = Depends(get_db)):
     if not profiles:
         raise HTTPException(status_code=404, detail="Belum ada profile untuk user ini.")
     return [profile_to_response(profile) for profile in profiles]
+
 
 
 @router.delete("/{id_profile}")

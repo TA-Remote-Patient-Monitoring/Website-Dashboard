@@ -146,24 +146,6 @@
             <span class="material-symbols-outlined mr-sm">description</span>
             <span class="font-title-md text-title-md">Patient Reports</span>
         </a>
-        <a href="#"
-           class="flex items-center px-md py-sm transition-colors
-                  {{ request()->routeIs('alerts.*') ? 'nav-active' : 'nav-inactive hover:bg-surface-container' }}">
-            <span class="material-symbols-outlined mr-sm">notifications_active</span>
-            <span class="font-title-md text-title-md">Alerts</span>
-        </a>
-        <a href="#"
-           class="flex items-center px-md py-sm transition-colors
-                  {{ request()->routeIs('users.*') ? 'nav-active' : 'nav-inactive hover:bg-surface-container' }}">
-            <span class="material-symbols-outlined mr-sm">manage_accounts</span>
-            <span class="font-title-md text-title-md">User Management</span>
-        </a>
-        <a href="#"
-           class="flex items-center px-md py-sm transition-colors
-                  {{ request()->routeIs('settings.*') ? 'nav-active' : 'nav-inactive hover:bg-surface-container' }}">
-            <span class="material-symbols-outlined mr-sm">settings</span>
-            <span class="font-title-md text-title-md">Settings</span>
-        </a>
     </nav>
 
     <div class="px-md mb-md">

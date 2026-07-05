@@ -12,6 +12,7 @@
         background-color: rgba(255, 255, 255, 0.8);
     }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 @endpush
 
 @section('content')
@@ -242,8 +243,62 @@
             </div>
         </section>
 
+        {{-- Sys/Dia Blood Pressure Chart --}}
+        <section class="bg-surface-container-lowest rounded-xl p-md border border-outline-variant shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
+            <div class="flex justify-between items-center mb-lg">
+                <h3 class="font-title-md text-title-md flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-primary">bloodtype</span>
+                    Blood Pressure Trend (Sys / Dia)
+                </h3>
+                <div class="flex gap-sm items-center text-label-caps text-on-surface-variant">
+                    <span class="inline-flex items-center gap-xs"><span class="w-3 h-1 rounded bg-primary inline-block"></span> Systolic</span>
+                    <span class="inline-flex items-center gap-xs"><span class="w-3 h-1 rounded bg-secondary inline-block"></span> Diastolic</span>
+                </div>
+            </div>
+            <div class="h-64">
+                <canvas id="bpChart"></canvas>
+            </div>
+        </section>
+
+        {{-- Glucose Level Chart --}}
+        <section class="bg-surface-container-lowest rounded-xl p-md border border-outline-variant shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
+            <div class="flex justify-between items-center mb-lg">
+                <h3 class="font-title-md text-title-md flex items-center gap-sm">
+                    <span class="material-symbols-outlined" style="color:#7B5EA7">water_drop</span>
+                    Blood Glucose Level Trend
+                </h3>
+                <div class="flex gap-sm items-center">
+                    @php
+                        $latestGlucose = $vitals['latest_glucose'];
+                        $glucoseBadgeClass = 'bg-secondary/10 text-secondary';
+                        $glucoseBadgeText  = 'Normal';
+                        if ($latestGlucose !== null) {
+                            if ($latestGlucose > 140) { $glucoseBadgeClass = 'bg-error/10 text-error'; $glucoseBadgeText = 'High'; }
+                            elseif ($latestGlucose > 100) { $glucoseBadgeClass = 'bg-on-secondary-container/10 text-on-secondary-container'; $glucoseBadgeText = 'Elevated'; }
+                        }
+                    @endphp
+                    @if($latestGlucose !== null)
+                        <span class="px-sm py-xs rounded-full text-label-caps font-bold {{ $glucoseBadgeClass }}">
+                            {{ $glucoseBadgeText }} — {{ number_format($latestGlucose, 1) }} mg/dL
+                        </span>
+                    @else
+                        <span class="px-sm py-xs rounded-full text-label-caps bg-surface-container text-on-surface-variant">No SpO2 Data</span>
+                    @endif
+                </div>
+            </div>
+            <div class="h-64">
+                <canvas id="glucoseChart"></canvas>
+            </div>
+            {{-- Reference lines legend --}}
+            <div class="flex gap-lg mt-sm text-[11px] text-on-surface-variant px-base">
+                <span class="inline-flex items-center gap-xs"><span class="w-4 h-px bg-secondary/60 inline-block border-t-2 border-dashed border-secondary"></span> Normal ≤ 100</span>
+                <span class="inline-flex items-center gap-xs"><span class="w-4 h-px bg-on-secondary-container/60 inline-block border-t-2 border-dashed border-on-secondary-container"></span> Elevated ≤ 140</span>
+                <span class="inline-flex items-center gap-xs"><span class="w-4 h-px bg-error/60 inline-block border-t-2 border-dashed border-error"></span> High > 140</span>
+            </div>
+        </section>
+
         {{-- Data Summary Grid --}}
-        <div class="grid grid-cols-3 gap-gutter">
+        <div class="grid grid-cols-4 gap-gutter">
 
             {{-- Avg Heart Rate --}}
             <div class="bg-surface-container-low p-md rounded-xl border border-outline-variant">
@@ -257,15 +312,27 @@
                 </div>
             </div>
 
-            {{-- Avg SpO2 --}}
+            {{-- Avg Sys/Dia --}}
             <div class="bg-surface-container-low p-md rounded-xl border border-outline-variant">
-                <p class="text-label-caps text-on-surface-variant mb-xs">Avg. SpO2</p>
-                <h4 class="text-headline-lg font-bold text-secondary">
-                    {{ $vitals['avg_spo2'] }} <span class="text-body-sm font-normal">%</span>
+                <p class="text-label-caps text-on-surface-variant mb-xs">Avg. Blood Pressure</p>
+                <h4 class="text-headline-lg font-bold text-on-surface">
+                    {{ $vitals['avg_spo2'] }}<span class="text-body-sm font-normal text-on-surface-variant"> mmHg</span>
                 </h4>
-                <div class="flex items-center gap-xs mt-base text-secondary font-bold text-body-sm">
-                    <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                <div class="flex items-center gap-xs mt-base text-on-surface-variant font-bold text-body-sm">
+                    <span class="material-symbols-outlined text-[16px]">bloodtype</span>
                     {{ $vitals['spo2_trend'] }}
+                </div>
+            </div>
+
+            {{-- Avg Glucose --}}
+            <div class="bg-surface-container-low p-md rounded-xl border border-outline-variant">
+                <p class="text-label-caps text-on-surface-variant mb-xs">Avg. Glucose</p>
+                <h4 class="text-headline-lg font-bold" style="color:#7B5EA7">
+                    {{ $vitals['avg_glucose'] }} <span class="text-body-sm font-normal">mg/dL</span>
+                </h4>
+                <div class="flex items-center gap-xs mt-base text-on-surface-variant font-bold text-body-sm">
+                    <span class="material-symbols-outlined text-[16px]">water_drop</span>
+                    From SpO2 measurement
                 </div>
             </div>
 
@@ -276,7 +343,7 @@
                     {{ $vitals['temperature'] }} <span class="text-body-sm font-normal">°C</span>
                 </h4>
                 <div class="flex items-center gap-xs mt-base text-on-surface-variant font-bold text-body-sm">
-                    <span class="material-symbols-outlined text-[16px]">horizontal_rule</span>
+                    <span class="material-symbols-outlined text-[16px]">device_thermostat</span>
                     {{ $vitals['temp_trend'] }}
                 </div>
             </div>
@@ -316,5 +383,148 @@
             setTimeout(() => badge.classList.remove('animate-pulse'), 1000);
         }
     }, 10000);
+
+    // ── Chart.js: Blood Pressure (Sys / Dia) ────────────────────────────────
+    const bpLabels  = {!! $charts['bp_labels'] !!};
+    const bpSysData = {!! $charts['bp_sys'] !!};
+    const bpDiaData = {!! $charts['bp_dia'] !!};
+
+    const bpCtx = document.getElementById('bpChart')?.getContext('2d');
+    if (bpCtx && bpLabels.length > 0) {
+        new Chart(bpCtx, {
+            type: 'line',
+            data: {
+                labels: bpLabels,
+                datasets: [
+                    {
+                        label: 'Systolic (mmHg)',
+                        data: bpSysData,
+                        borderColor: '#1565C0',
+                        backgroundColor: 'rgba(21,101,192,0.08)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        borderWidth: 2.5,
+                    },
+                    {
+                        label: 'Diastolic (mmHg)',
+                        data: bpDiaData,
+                        borderColor: '#006c4f',
+                        backgroundColor: 'rgba(0,108,79,0.06)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        borderWidth: 2.5,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} mmHg`
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    y: {
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        ticks: { font: { size: 11 }, callback: v => v + ' mmHg' },
+                        // Reference zone
+                        suggestedMin: 60,
+                        suggestedMax: 160,
+                    }
+                }
+            }
+        });
+    } else if (bpCtx) {
+        bpCtx.canvas.parentElement.innerHTML =
+            '<p class="flex h-full items-center justify-center text-on-surface-variant text-body-sm">No blood pressure data available.</p>';
+    }
+
+    // ── Chart.js: Glucose Level ──────────────────────────────────────────────
+    const glucoseLabels = {!! $charts['glucose_labels'] !!};
+    const glucoseData   = {!! $charts['glucose_data'] !!};
+
+    const glCtx = document.getElementById('glucoseChart')?.getContext('2d');
+    if (glCtx && glucoseLabels.length > 0) {
+        new Chart(glCtx, {
+            type: 'line',
+            data: {
+                labels: glucoseLabels,
+                datasets: [{
+                    label: 'Blood Glucose (mg/dL)',
+                    data: glucoseData,
+                    borderColor: '#7B5EA7',
+                    backgroundColor: 'rgba(123,94,167,0.08)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    borderWidth: 2.5,
+                    spanGaps: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ctx.parsed.y !== null
+                                ? ` Glucose: ${ctx.parsed.y} mg/dL`
+                                : ' No data'
+                        }
+                    },
+                    // Draw reference horizontal lines
+                    annotation: undefined
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    y: {
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        ticks: { font: { size: 11 }, callback: v => v + ' mg/dL' },
+                        suggestedMin: 60,
+                        suggestedMax: 200,
+                    }
+                }
+            },
+            plugins: [{
+                id: 'referenceLines',
+                afterDraw(chart) {
+                    const { ctx: c, chartArea: { left, right }, scales: { y } } = chart;
+                    const drawLine = (value, color, label) => {
+                        const yPos = y.getPixelForValue(value);
+                        c.save();
+                        c.beginPath();
+                        c.setLineDash([6, 4]);
+                        c.strokeStyle = color;
+                        c.lineWidth = 1.2;
+                        c.moveTo(left, yPos);
+                        c.lineTo(right, yPos);
+                        c.stroke();
+                        c.fillStyle = color;
+                        c.font = '10px Inter, sans-serif';
+                        c.fillText(label, right - c.measureText(label).width - 4, yPos - 3);
+                        c.restore();
+                    };
+                    drawLine(100, 'rgba(0,108,79,0.5)',  'Normal  100');
+                    drawLine(140, 'rgba(90,60,0,0.45)',  'Elevated 140');
+                }
+            }]
+        });
+    } else if (glCtx) {
+        glCtx.canvas.parentElement.innerHTML =
+            '<p class="flex h-full items-center justify-center text-on-surface-variant text-body-sm">No glucose data available. SpO2 measurement required.</p>';
+    }
 </script>
 @endpush
