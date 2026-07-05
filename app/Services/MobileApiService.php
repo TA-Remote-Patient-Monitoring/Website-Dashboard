@@ -21,11 +21,22 @@ class MobileApiService
 {
     protected string $baseUrl;
     protected int    $timeout;
+    protected string $serviceKey;
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('services.rpms_api.base_url', 'http://10.20.31.178:8000'), '/');
-        $this->timeout = (int) config('services.rpms_api.timeout', 10);
+        $this->baseUrl    = rtrim(config('services.rpms_api.base_url', 'http://10.20.31.178:8000'), '/');
+        $this->timeout    = (int) config('services.rpms_api.timeout', 10);
+        $this->serviceKey = (string) config('services.rpms_api.service_key', '');
+    }
+
+    /**
+     * Helper: buat HTTP request dengan service key header.
+     */
+    protected function apiRequest()
+    {
+        return Http::timeout($this->timeout)
+            ->withHeaders(['X-Service-Key' => $this->serviceKey]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -43,7 +54,7 @@ class MobileApiService
     public function getProfiles(int $idUser): array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = $this->apiRequest()
                 ->get("{$this->baseUrl}/api/profiles/{$idUser}");
 
             if ($response->successful()) {
@@ -96,7 +107,7 @@ class MobileApiService
     public function searchUserByPhone(string $phone): ?array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = $this->apiRequest()
                 ->get("{$this->baseUrl}/api/profiles/search", ['phone' => $phone]);
 
             if ($response->successful()) {
@@ -134,7 +145,7 @@ class MobileApiService
     public function getMeasurements(int $idProfile): array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = $this->apiRequest()
                 ->get("{$this->baseUrl}/api/measurements/{$idProfile}");
 
             if ($response->successful()) {
@@ -164,7 +175,7 @@ class MobileApiService
     public function getLatestMeasurement(int $idProfile): ?array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = $this->apiRequest()
                 ->get("{$this->baseUrl}/api/measurements/{$idProfile}/latest");
 
             if ($response->successful()) {
@@ -188,7 +199,7 @@ class MobileApiService
     public function getSpo2Measurements(int $idProfile): array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = $this->apiRequest()
                 ->get("{$this->baseUrl}/api/measurements/{$idProfile}/spo2");
 
             if ($response->successful()) {
@@ -219,7 +230,7 @@ class MobileApiService
     public function getLatestSpo2Measurement(int $idProfile): ?array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = $this->apiRequest()
                 ->get("{$this->baseUrl}/api/measurements/{$idProfile}/spo2/latest");
 
             if ($response->successful()) {

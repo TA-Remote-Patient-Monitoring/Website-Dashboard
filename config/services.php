@@ -37,8 +37,9 @@ return [
 
     // ── RPMS Mobile API ───────────────────────────────────────────────────────
     'rpms_api' => [
-        'base_url' => env('RPMS_API_BASE_URL', 'http://10.20.31.178:8000'),
-        'timeout'  => env('RPMS_API_TIMEOUT', 10),
+        'base_url'    => env('RPMS_API_BASE_URL', 'http://10.20.31.178:8000'),
+        'timeout'     => env('RPMS_API_TIMEOUT', 10),
+        'service_key' => env('RPMS_SERVICE_KEY', ''),
     ],
 
 ];
